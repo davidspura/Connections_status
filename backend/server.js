@@ -10,7 +10,7 @@ const app = express();
 const apiData = require("./controllers/apiData");
 app.use(bodyParse.json());
 app.use(cors());
-const api = "https://api.testing.barkio.com/parse/health";
+const api = process.env.API_SERVER;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -19,12 +19,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
-
+let emailTime = "";
+function timeForMail() {
+  return (emailTime = moment().format("ll HH:mm"));
+}
 const mailOptions = {
   from: process.env.EMAIL,
   to: process.env.EMAIL_REC,
-  subject: "Issue with the server/s",
-  text: "There is an issue with the server/s"
+  subject: "Issue with the API server",
+  text: "There is an issue with API server since" + emailTime
 };
 
 const db = knex({
@@ -42,6 +45,7 @@ app.get("/", (req, res) => {
 });
 
 function mail() {
+  timeForMail();
   transporter.sendMail(mailOptions, function(error, info) {
     console.log("Email sent: " + info.response);
   });

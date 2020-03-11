@@ -1,12 +1,10 @@
-const handleBarkioApi = (req, res, db) => {
-  db.select("*")
+async function handleBarkioApi(req, res, db) {
+  let data = await db
+    .select("*")
     .from("barkioapi")
-
-    .limit(288)
-    .then(data => {
-      res.json(data);
-    });
-};
+    .limit(288);
+  return res.json(data);
+}
 module.exports = {
   handleBarkioApi: handleBarkioApi
 };

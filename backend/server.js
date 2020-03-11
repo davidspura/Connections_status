@@ -145,7 +145,6 @@ const getXmppData = () => {
 
 //// EMAIL AND TIME ON ERROR
 const timeAndEmailOnError = (service, ready) => {
-  console.log(ready, "READY");
   if (checkTime > delayTime) {
     delayTime = moment()
       .add(1, "hour")
@@ -153,7 +152,6 @@ const timeAndEmailOnError = (service, ready) => {
     mail(service);
   }
   if (ready === true) {
-    console.log(ready, "IF");
     frontEndTime = moment().format(dataFormat);
     return !ready;
   }
@@ -193,7 +191,7 @@ const getApiData = (response, api, database, result) => {
       .format();
     return mail(api);
   } else {
-    console.log("No email was sent");
+    console.log("No email was sent, everything is working properly");
   }
   isReadyApi = true;
   if (status !== "ok" && isReadyApi === true) {

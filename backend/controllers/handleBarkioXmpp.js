@@ -1,12 +1,10 @@
-const handleBarkioXmpp = (req, res, db) => {
-  db.select("*")
+async function handleBarkioXmpp(req, res, db) {
+  let data = await db
+    .select("*")
     .from("barkioxmpp")
-
-    .limit(288)
-    .then(data => {
-      res.json(data);
-    });
-};
+    .limit(288);
+  return res.json(data);
+}
 module.exports = {
   handleBarkioXmpp: handleBarkioXmpp
 };

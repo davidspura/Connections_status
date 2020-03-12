@@ -2,7 +2,7 @@ FROM node:current-slim
 
 WORKDIR /usr/src/app
 
-COPY package.json .
+COPY package.json ./backend/
 
 RUN npm install
 

@@ -19,49 +19,18 @@ let delayTime = "";
 let start = "";
 let finish = "";
 let result = "";
-////POSSIBLE CHANGES IN FUTURE
-const nodePort = 3001;
-const handleBarkioApi = require("./controllers/handleBarkioApi");
-const handleBarkioXmpp = require("./controllers/handleBarkioXmpp");
+let dataArray = [];
+app.use(express.static(path.join(__dirname, "build")));
+//POSSIBLE CHANGES IN FUTURE
+const NODE_PORT = 3001;
 const barkioXmppDatabase = "barkioxmpp";
 const dataFormat = "ll HH:mm";
 const barkioApi = process.env.API_SERVER;
 const xmppPort = process.env.XMPP_PORT;
 const barkioXmpp = process.env.XMPP_SERVER;
-const fiveMinutes = 300000;
+const FIVE_MINUTES = 300000;
 
-////SERVER REQUESTS MANAGER
-const ServersConnections = [
-  //barkio xmppp
-  setInterval(function() {
-    getXmppData();
-  }, fiveMinutes),
-  app.get("/barkioXmpp", (req, res) => {
-    handleBarkioXmpp.handleBarkioXmpp(req, res, db);
-  }),
-  //barkio api
-  setInterval(function() {
-    apiRequest(
-      barkioApi /*server adress*/,
-      "barkioapi" /*database table name*/
-    );
-  }, fiveMinutes /*Frequency of check */),
-  app.get("/barkioApi", (req, res) => {
-    handleBarkioApi.handleBarkioApi(req, res, db);
-  })
-];
-
-app.use(express.static(path.join(__dirname, "build")));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
-
-app.get("/time", function(req, res) {
-  res.send(JSON.stringify(frontEndTime));
-});
-
-////DATABASE
+//DATABASE
 const db = knex({
   client: "pg",
   connection: {
@@ -72,6 +41,67 @@ const db = knex({
   }
 });
 
+//DISPLAY NAMES
+let namesArray = [
+  "API server status",
+  "XMPP server status"
+]; /*Name of service that will show on frontend 
+(must be in same order as bellow, first name will match first called service etc.) */
+
+//BARKIO API
+setInterval(function() {
+  apiRequest(barkioApi /*server adress*/, "barkioapi" /*database table name*/);
+  loadData(db, "barkioapi");
+}, FIVE_MINUTES /*Frequency of check */);
+initialState(db, "barkioapi");
+//BARKIO XMPP
+setInterval(function() {
+  getXmppData();
+  loadData(db, "barkioxmpp");
+}, FIVE_MINUTES);
+initialState(db, "barkioxmpp");
+
+//INITIAL LOAD OF DATA
+async function initialState(db, service) {
+  let data = await db
+    .select("*")
+    .from(service)
+    .limit(288)
+    .orderBy("id", "desc");
+  dataArray.push({ name: data });
+}
+
+//DATA TO FRONTEND
+async function loadData(db, service) {
+  if (numberCheck === 2) {
+    dataArray = [];
+    numberCheck = 0;
+  }
+  numberCheck++;
+  let data = await db
+    .select("*")
+    .from(service)
+    .limit(288)
+    .orderBy("id", "desc");
+  dataArray.push({ name: data });
+}
+let numberCheck = namesArray.length;
+//SERVER LINKS FOR FRONTEND
+app.get("/dataArray", function(req, res) {
+  res.send(JSON.stringify(dataArray));
+});
+
+app.get("/namesArray", function(req, res) {
+  res.send(JSON.stringify(namesArray));
+});
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
+
+app.get("/time", function(req, res) {
+  res.send(JSON.stringify(frontEndTime));
+});
 ////EMAIL
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -137,7 +167,7 @@ const getXmppData = () => {
     db(barkioXmppDatabase)
       .insert({
         status: connnect ? true : false,
-        time: result
+        time: connnect ? result : 0
       })
       .then(console.log);
   };
@@ -145,6 +175,7 @@ const getXmppData = () => {
 
 //// EMAIL AND TIME ON ERROR
 const timeAndEmailOnError = (service, ready) => {
+  console.log(ready, "READY");
   if (checkTime > delayTime) {
     delayTime = moment()
       .add(1, "hour")
@@ -152,6 +183,7 @@ const timeAndEmailOnError = (service, ready) => {
     mail(service);
   }
   if (ready === true) {
+    console.log(ready, "IF");
     frontEndTime = moment().format(dataFormat);
     return !ready;
   }
@@ -176,7 +208,7 @@ const apiRequest = (api, database) => {
       db(database)
         .insert({
           status: false,
-          time: result
+          time: 0
         })
         .then(console.log);
       isReadyApi = timeAndEmailOnError(api, isReadyApi);
@@ -191,7 +223,7 @@ const getApiData = (response, api, database, result) => {
       .format();
     return mail(api);
   } else {
-    console.log("No email was sent, everything is working properly");
+    console.log("No email was sent");
   }
   isReadyApi = true;
   if (status !== "ok" && isReadyApi === true) {
@@ -203,9 +235,9 @@ const getApiData = (response, api, database, result) => {
   db(database)
     .insert({
       status: status === "ok" ? true : false,
-      time: result
+      time: status === "ok" ? result : 0
     })
     .then(console.log);
 };
 
-app.listen(nodePort), console.log("server is running");
+app.listen(NODE_PORT), console.log("server is running");
